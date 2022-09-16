@@ -27,5 +27,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: InfiniteTagLoader
-        path: bin/Release/net5.0-windows
+        path: InfiniteTagLoader/bin/Release/net5.0-windows
         retention-days: 90
