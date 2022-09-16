@@ -13,11 +13,9 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0.1"/>
     </WindowChrome.WindowChrome>
-
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static SystemCommands.CloseWindowCommand}" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed_Close" />
         <CommandBinding Command="{x:Static SystemCommands.MaximizeWindowCommand}" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed_Maximize" />
@@ -32,14 +30,24 @@
         </Grid.RowDefinitions>
         <!--Top Tool Bar-->
         <Grid Background="{StaticResource titleBackground}">
-            <TextBlock Text="Infinite Tag Loader" Style="{DynamicResource Z_TextBlockStyle}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5,0,0,0"/>
+            <Menu Style="{DynamicResource Z_MenuStyle}">
+                <MenuItem x:Name="FileMenu" Style="{DynamicResource Z_MenuItemStyle}" Header="File" Margin="1,0,0,0">
+                    <MenuItem Header="Open" Click="OpenModuleClick"/>
+                    <MenuItem x:Name="RefreshButton"  Header="Refresh" Click="RefreshModuleClick"/>
+                    <MenuItem Header="Close" Click="CloseModuleClick"/>
+                </MenuItem>
+                <MenuItem x:Name="SettingsMenu" Style="{DynamicResource Z_MenuItemStyle}" Header="Settings" Margin="1,0,0,0">
+                    <MenuItem Header="Show Path" IsCheckable="True" Click="ShowPathClick" ToolTip="Enables Full Paths"/>
+                </MenuItem>
+            </Menu>
+            <TextBlock Text="Infinite Tag Loader" Style="{DynamicResource Z_TextBlockStyle}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Style="{StaticResource MinimizeButtonStyle}" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize" Command="{x:Static SystemCommands.MinimizeWindowCommand}" />
                 <Button x:Name="RestoreButton" Visibility="Collapsed" Style="{StaticResource RestoreButtonStyle}" Command="{x:Static SystemCommands.RestoreWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Restore"/>
                 <Button x:Name="MaximizeButton" Visibility="Visible" Style="{StaticResource MaximizeButtonStyle}" Command="{x:Static SystemCommands.MaximizeWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Maximize" />
                 <Button Style="{StaticResource CloseButtonStyle}" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Close" Command="{x:Static SystemCommands.CloseWindowCommand}"/>
             </StackPanel>
-            <Rectangle Fill="Transparent" StrokeThickness="0" MouseDown="Move_Window" Margin="0,0,132,0"/>
+            <Rectangle Fill="Transparent" StrokeThickness="0" MouseDown="Move_Window" Margin="100,0,132,0"/>
         </Grid>
         <!--Main Window Content-->
         <Grid Grid.Row="1">
@@ -53,7 +61,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Style="{StaticResource Z_TextBlockStyle}" Text="Search: " VerticalAlignment="Center" Margin="3"/>
-                <TextBox x:Name="Searchbox" HorizontalAlignment="Stretch" Grid.Column="1" Margin="0,0,3,0" Height="20" BorderBrush="#404040" Background="#303030"/>
+                <TextBox x:Name="Searchbox" HorizontalAlignment="Stretch" Grid.Column="1" Margin="0,0,3,0" Height="20" BorderBrush="#404040" Background="#303030" TextChanged="SearchChanged"/>
             </Grid>
             <Grid Grid.Row="1">
                 <ScrollViewer>
@@ -63,10 +71,7 @@
         </Grid>
         <!--Status Bar-->
         <StackPanel Orientation="Horizontal" Grid.Row="2" Background="{StaticResource titleBackground}">
-            <Button Content="Open Module" Height="20" Width="100" Margin="5,2.5" Click="OpenModuleClick"/>
-            <Button Content="Close Module" Height="20" Width="100" Margin="5,2.5" Click="CloseModuleClick"/>
-            <TextBlock Margin="5" Text="Status: " VerticalAlignment="Center" Style="{StaticResource statusTextStyle}"/>
-            <TextBlock x:Name="statusText" Text="Open a level module to start..." VerticalAlignment="Center" Style="{StaticResource statusTextStyle}"/>
+            <TextBlock x:Name="statusText" Margin="2.5" VerticalAlignment="Center" Style="{StaticResource statusTextStyle}"/>
         </StackPanel>
     </Grid>
 </Window>

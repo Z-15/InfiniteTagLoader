@@ -14,7 +14,6 @@ namespace InfiniteTagLoader
 {
     // TODO:
     // Figure out how to load tags from other modules.
-    // Make the search bar work.
     // Maybe find a way to seperate tag names by the module they are in. It'll be easier to know which tags you can load that way.
 
     public partial class MainWindow : Window
@@ -55,54 +54,78 @@ namespace InfiniteTagLoader
         }
         #endregion
 
+        #region Initialization
         public MainWindow()
         {
             InitializeComponent();
             GetTagNames();
         }
 
-        private void GetTagNames()
+        private async void GetTagNames()
         {
-            foreach (string line in File.ReadAllLines(@".\Files\tagnames.txt"))
+            FileMenu.IsEnabled = false;
+            SettingsMenu.IsEnabled = false;
+
+            WriteStatus("Reading tag names...");
+
+            Task task2 = new Task(() =>
             {
-
-                string[] temp = line.Split(":");
-                string tagID = temp[0].Trim();
-
-                if (!tagIDs.ContainsKey(tagID) && tagID.Length > 1)
+                foreach (string line in File.ReadAllLines(@".\Files\tagnames.txt"))
                 {
-                    string tagPath = temp[1].Trim();
-                    string tagName = tagPath.Split("\\").Last().Trim();
-                    string tagFolder = temp[1].Split('.')[1].Trim();
 
-                    TagInfo t = new TagInfo();
-                    t.tagID = tagID;
-                    t.tagName = tagName;
-                    t.tagFolder = tagFolder;
-                    t.tagPath = tagPath;
-                    tagIDs.Add(tagID, t);
+                    string[] temp = line.Split(":");
+                    string tagID = temp[0].Trim();
 
-                    if (tagFolders.ContainsKey(tagFolder))
+                    if (!tagIDs.ContainsKey(tagID) && tagID.Length > 1)
                     {
-                        TagType tagType = tagFolders[tagFolder];
-                        tagType.tags.Add(t);
+                        string tagPath = temp[1].Trim();
+                        string tagName = tagPath.Split("\\").Last().Trim();
+                        string tagFolder = temp[1].Split('.')[1].Trim();
+
+                        TagInfo t = new TagInfo();
+                        t.tagID = tagID;
+                        t.tagName = tagName;
+                        t.tagFolder = tagFolder;
+                        t.tagPath = tagPath;
+                        tagIDs.Add(tagID, t);
+
+                        if (tagFolders.ContainsKey(tagFolder))
+                        {
+                            TagType tagType = tagFolders[tagFolder];
+                            tagType.tags.Add(t);
+                        }
+                        else
+                        {
+                            TagType tagType = new TagType();
+                            tagType.type = tagFolder;
+                            tagType.tags.Add(t);
+                            tagType.tags.Sort();
+                            tagFolders.Add(tagFolder, tagType);
+
+                        }
                     }
-                    else
-                    {
-                        TagType tagType = new TagType();
-                        tagType.type = tagFolder;
-                        tagType.tags.Add(t);
-                        tagType.tags.Sort();
-                        tagFolders.Add(tagFolder, tagType);
-
-                    }
-
-
                 }
-            }
+            });
+            task2.Start();
+            await task2;
+            task2.Dispose();
+
+            WriteStatus("Open a level module to start...");
+
+            FileMenu.IsEnabled = true;
+            SettingsMenu.IsEnabled = true;
         }
+        #endregion
 
-
+        #region Module Reading and Writing
+        private bool showPaths = false;
+        private bool tagOpen = false;
+        private int tagListStart = 0;
+        private string moduleFileName = "";
+        private FileStream moduleStream;
+        private Dictionary<int, string> tagList = new Dictionary<int, string>();
+        private SortedDictionary<string, TagInfo> tagIDs = new SortedDictionary<string, TagInfo>();
+        private SortedDictionary<string, TagType> tagFolders = new SortedDictionary<string, TagType>();
 
         public class TagInfo
         {
@@ -118,79 +141,152 @@ namespace InfiniteTagLoader
             public List<TagInfo> tags = new List<TagInfo>();
         }
 
-        #region Module Reading and Writing
-        private int tagListStart = 0;
-        private string moduleFileName = "";
-        private FileStream moduleStream;
-        private Dictionary<int, string> tagList = new Dictionary<int, string>();
-        private SortedDictionary<string, TagInfo> tagIDs = new SortedDictionary<string, TagInfo>();
-        private SortedDictionary<string, TagType> tagFolders = new SortedDictionary<string, TagType>();
-
         private async void OpenModuleClick(object sender, RoutedEventArgs e)
         {
-            if (moduleStream != null)
+            try
             {
-                Reset();
-            }
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Module File (*.module)|*.module";
-
-            if (ofd.ShowDialog() == true)
-            {
-                moduleFileName = ofd.FileName.Split('\\').Last();
-                moduleStream = new FileStream(ofd.FileName, FileMode.Open, FileAccess.ReadWrite);
-
-                WriteStatus("Scanning for tag list...");
-                Thread.Sleep(100);
-
-                bool result = false;
-                Task task1 = new Task(() =>
+                if (tagOpen)
                 {
-                    result = TagListScan();
-                });
-                task1.Start();
-                await task1;
-                task1.Dispose();
+                    Reset();
+                }
 
-                if (result)
+                OpenFileDialog ofd = new OpenFileDialog();
+                ofd.Filter = "Module File (*.module)|*.module";
+
+                if (ofd.ShowDialog() == true)
                 {
-                    WriteStatus("Loading controls...");
+                    moduleFileName = ofd.FileName.Split('\\').Last();
+                    moduleStream = new FileStream(ofd.FileName, FileMode.Open, FileAccess.ReadWrite);
+
+                    WriteStatus("Scanning for tag list...");
                     Thread.Sleep(100);
 
-                    tagListStart += 36;
-                    moduleStream.Position = tagListStart;
-                    int tagCount = 0;
-                    Task task2 = new Task(() =>
+                    bool result = false;
+                    Task task1 = new Task(() =>
                     {
-                        tagCount = GetTagList();
+                        result = TagListScan();
                     });
-                    task2.Start();
-                    await task2;
-                    task2.Dispose();
-                    CreateControls();
+                    task1.Start();
+                    await task1;
+                    task1.Dispose();
 
-                    WriteStatus( tagCount + " tags loaded from " + moduleFileName + "!");
-                }  
-                else
-                    WriteStatus("Failed to open " + moduleFileName + "!");
+                    if (result)
+                    {
+                        WriteStatus("Loading controls...");
+                        Thread.Sleep(100);
+
+                        tagListStart += 36;
+                        moduleStream.Position = tagListStart;
+                        int tagCount = 0;
+                        Task task2 = new Task(() =>
+                        {
+                            tagCount = GetTagList();
+                        });
+                        task2.Start();
+                        await task2;
+                        task2.Dispose();
+                        CreateControls();
+
+                        WriteStatus(tagCount + " tags loaded from " + moduleFileName + "!");
+                        tagOpen = true;
+                    }
+                    else
+                        WriteStatus("Failed to open " + moduleFileName + "!");
+                }
             }
+            catch (Exception ex)
+            {
+                WriteStatus("Error opening module: " + ex.Message);
+            }
+        }
+
+        private void RefreshModuleClick(object sender, RoutedEventArgs e)
+        {
+            RefreshModule();
         }
 
         private void CloseModuleClick(object sender, RoutedEventArgs e)
         {
-            Reset();
-            WriteStatus("Module Closed!");
+            try
+            {
+                Reset();
+                WriteStatus("Module closed!");
+            }
+            catch (Exception ex)
+            {
+                WriteStatus("Error closing module: " + ex.Message);
+            }
         }
 
-        private void Reset()
+        private void TagTypeChanged(object sender, RoutedEventArgs e)
         {
-            moduleStream.Close();
-            moduleStream.Dispose();
-            moduleFileName = "";
-            tagListStart = 0;
-            tagList.Clear();
-            TagViewer.Children.Clear();
+            TagType tT = new TagType();
+            ComboBox s = (ComboBox)sender;
+            TagReference tR = (TagReference)s.Tag;
+            tR.tags.Items.Clear();
+
+            if (s.SelectedItem != null)
+                tT = tagFolders[s.SelectedItem.ToString()];
+
+            foreach (TagInfo tag in tT.tags)
+            {
+                if (showPaths)
+                    tR.tags.Items.Add(tag.tagID + " : " + tag.tagPath);
+                else
+                    tR.tags.Items.Add(tag.tagID + " : " + tag.tagName);
+            }
+
             GC.Collect();
+        }
+
+        private void TagChanged(object sender, RoutedEventArgs e)
+        {
+            ComboBox s = (ComboBox)sender;
+            TagReference tR = (TagReference)s.Tag;
+
+            if (s.SelectedItem != null)
+            {
+                string hexID = ((string)s.SelectedItem).Split(" : ")[0].Trim();
+
+                moduleStream.Position = (int)tR.Tag;
+                moduleStream.Write(Convert.FromHexString(hexID));
+
+                moduleStream.Position = (int)tR.Tag;
+                byte[] test = new byte[4];
+                moduleStream.Read(test, 0, 4);
+                string newID = Convert.ToHexString(test);
+                tR.tagID.Text = newID;
+            }
+        }
+
+        private async void RefreshModule()
+        {
+            try
+            {
+                WriteStatus("Refreshing...");
+
+                tagList.Clear();
+                TagViewer.Children.Clear();
+
+                moduleStream.Position = tagListStart;
+
+                int tagCount = 0;
+                Task task2 = new Task(() =>
+                {
+                    tagCount = GetTagList();
+                });
+                task2.Start();
+                await task2;
+                task2.Dispose();
+
+                CreateControls();
+
+                WriteStatus("Module refreshed!");
+            }
+            catch (Exception ex)
+            {
+                WriteStatus("Error refreshing: " + ex.Message);
+            }
         }
 
         private bool TagListScan()
@@ -222,9 +318,7 @@ namespace InfiniteTagLoader
             }
             return found;
         }
-        #endregion
 
-        #region GUI
         private int GetTagList()
         {
             int check = 0;
@@ -236,7 +330,6 @@ namespace InfiniteTagLoader
                 moduleStream.Read(buffer, 0, buffer.Length);
                 string tagID = buffer[0].ToString("X2") + buffer[1].ToString("X2") + buffer[2].ToString("X2") + buffer[3].ToString("X2");
 
-                
                 if (tagID != "00000000")
                 {
                     tagList.Add((int)moduleStream.Position - 4, tagID);
@@ -255,6 +348,20 @@ namespace InfiniteTagLoader
             return count;
         }
 
+        private void Reset()
+        {
+            moduleStream.Close();
+            moduleStream.Dispose();
+            moduleFileName = "";
+            tagListStart = 0;
+            tagList.Clear();
+            TagViewer.Children.Clear();
+            tagOpen = false;
+            GC.Collect();
+        }
+        #endregion
+
+        #region GUI
         private void CreateControls()
         {
             foreach (KeyValuePair<int, string> tag in tagList)
@@ -264,13 +371,18 @@ namespace InfiniteTagLoader
                     TagReference tR = new TagReference();
                     TagInfo t = tagIDs[tag.Value];
                     tR.tagID.Text = tag.Value;
-                    tR.tags.Items.Add(t.tagName);
+                    
+                    if (showPaths)
+                        tR.tags.Items.Add(t.tagPath);
+                    else
+                        tR.tags.Items.Add(t.tagName);
+
                     tR.tags.SelectedIndex = 0;
                     tR.tagType.SelectionChanged += TagTypeChanged;
                     tR.tags.SelectionChanged += TagChanged;
                     tR.tags.Tag = tR;
                     tR.Tag = tag.Key;
-                    
+
                     foreach (TagType tT in tagFolders.Values)
                     {
                         tR.tagType.Items.Add(tT.type);
@@ -282,51 +394,38 @@ namespace InfiniteTagLoader
             }
         }
 
-        private void TagTypeChanged(object sender, RoutedEventArgs e)
+        private void ShowPathClick(object sender, RoutedEventArgs e)
         {
-            TagType tT = new TagType();
-            ComboBox s = (ComboBox)sender;
-            TagReference tR = (TagReference)s.Tag;
-            tR.tags.Items.Clear();
+            MenuItem s = (MenuItem)sender;
 
-            if (s.SelectedItem != null)
-               tT = tagFolders[s.SelectedItem.ToString()];
+            if (s.IsChecked)
+                showPaths = true;
+            else
+                showPaths = false;
 
-            foreach (TagInfo tag in tT.tags)
-            {
-                tR.tags.Items.Add(tag.tagID + " : " + tag.tagName);
-            }
-
-            GC.Collect();
+            if (tagOpen)
+                RefreshModule();
         }
 
-        private void TagChanged(object sender, RoutedEventArgs e)
+        private void SearchChanged(object sender, RoutedEventArgs e)
         {
-            ComboBox s = (ComboBox)sender;
-            TagReference tR = (TagReference)s.Tag;
-            
-            if (s.SelectedItem != null)
+            if (!String.IsNullOrEmpty(Searchbox.Text))
             {
-                string hexID = ((string)s.SelectedItem).Split(" : ")[0].Trim();
-
-                moduleStream.Position = (int)tR.Tag;
-                moduleStream.Write(StringToByteArray(hexID));
-
-                moduleStream.Position = (int)tR.Tag;
-                byte[] test = new byte[4];
-                moduleStream.Read(test, 0, 4);
-                string newID = Convert.ToHexString(test);
-                tR.tagID.Text = newID;
+                foreach (TagReference tR in TagViewer.Children)
+                {
+                    if (tR.tags.SelectedItem.ToString().Contains(Searchbox.Text))
+                        tR.Visibility = Visibility.Visible;
+                    else
+                        tR.Visibility = Visibility.Collapsed;
+                }
             }
-        }
-
-        public byte[] StringToByteArray(String hex)
-        {
-            int NumberChars = hex.Length;
-            byte[] bytes = new byte[NumberChars / 2];
-            for (int i = 0; i < NumberChars; i += 2)
-                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
-            return bytes;
+            else
+            {
+                foreach (TagReference tR in TagViewer.Children)
+                {
+                    tR.Visibility = Visibility.Visible;
+                }
+            }
         }
 
         private void WriteStatus(string message)
