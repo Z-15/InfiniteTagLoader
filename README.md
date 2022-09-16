@@ -3,7 +3,7 @@
 # Download
 
 Current Build: [Click Me!](https://nightly.link/Z-15/InfiniteTagLoader/workflows/dotnet/master/InfiniteTagLoader.zip)
-# Instructions
+# Instructions - [Video Tutorial](https://youtu.be/nTQUwghvy5Q)
   1. Launch the program.
   2. Open a level module.
   3. Find a tag you want to replace.
