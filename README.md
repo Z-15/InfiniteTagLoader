@@ -2,8 +2,7 @@
 
 # Download
 
-Current Build: 
-
+Current Build: [Click Me!](https://nightly.link/Z-15/InfiniteTagLoader/workflows/dotnet/master/InfiniteTagLoader.zip)
 # Instructions
   1. Launch the program.
   2. Open a level module.
