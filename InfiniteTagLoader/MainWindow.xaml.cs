@@ -118,7 +118,7 @@ namespace InfiniteTagLoader
         #endregion
 
         #region Module Reading and Writing
-        private bool showPaths = false;
+        private bool showPaths = true;
         private bool tagOpen = false;
         private int tagListStart = 0;
         private string moduleFileName = "";
@@ -126,6 +126,7 @@ namespace InfiniteTagLoader
         private Dictionary<int, string> tagList = new Dictionary<int, string>();
         private SortedDictionary<string, TagInfo> tagIDs = new SortedDictionary<string, TagInfo>();
         private SortedDictionary<string, TagType> tagFolders = new SortedDictionary<string, TagType>();
+        private List<int> tagListPos = new List<int>();
 
         public class TagInfo
         {
@@ -175,7 +176,7 @@ namespace InfiniteTagLoader
                         WriteStatus("Loading controls...");
                         Thread.Sleep(100);
 
-                        tagListStart += 36;
+                        tagListStart += 37;
                         moduleStream.Position = tagListStart;
                         int tagCount = 0;
                         Task task2 = new Task(() =>
@@ -293,6 +294,7 @@ namespace InfiniteTagLoader
         {
             tagListStart = 0;
             bool found = false;
+
             while (!found)
             {
                 if (moduleStream.ReadByte() == 0x8C)
@@ -321,28 +323,51 @@ namespace InfiniteTagLoader
 
         private int GetTagList()
         {
-            int check = 0;
+            int current = 0x80;
             int count = 0;
+            bool pastMain = false;
 
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 20000; i++)
             {
                 byte[] buffer = new byte[4];
                 moduleStream.Read(buffer, 0, buffer.Length);
-                string tagID = buffer[0].ToString("X2") + buffer[1].ToString("X2") + buffer[2].ToString("X2") + buffer[3].ToString("X2");
 
-                if (tagID != "00000000")
+                string bOne = buffer[0].ToString("X2");
+                string bTwo = buffer[1].ToString("X2");
+                string bThree = buffer[2].ToString("X2");
+
+                string bFourTest = current.ToString("X2");
+
+                string bFour = buffer[3].ToString("X2");
+                int bFourByte = buffer[3];
+
+                string testTagID = bOne + bTwo + bThree + bFourTest;
+                string tagID = bOne + bTwo + bThree + bFour;
+
+                if (tagIDs.ContainsKey(testTagID) && !pastMain)
+                {
+                    moduleStream.Position -= 1;
+                    tagID = testTagID;
+                }
+                else if (tagIDs.ContainsKey(tagID) && !pastMain)
+                {
+                    current = bFourByte;
+                }
+                else if (bOne == "35" && !pastMain)
+                {
+                    moduleStream.Position -= 3;
+                    pastMain = true;
+                }
+                else if (!tagIDs.ContainsKey(tagID))
+                {
+                    moduleStream.Position -= 3;
+                }
+
+                if (tagID != "00000000" && tagIDs.ContainsKey(tagID))
                 {
                     tagList.Add((int)moduleStream.Position - 4, tagID);
-                    check = 0;
                     count++;
                 }
-                else
-                {
-                    check++;
-                }
-
-                if (check >= 4)
-                    break;
             }
 
             return count;

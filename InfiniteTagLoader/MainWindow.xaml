@@ -37,7 +37,7 @@
                     <MenuItem Header="Close" Click="CloseModuleClick"/>
                 </MenuItem>
                 <MenuItem x:Name="SettingsMenu" Style="{DynamicResource Z_MenuItemStyle}" Header="Settings" Margin="1,0,0,0">
-                    <MenuItem Header="Show Path" IsCheckable="True" Click="ShowPathClick" ToolTip="Enables Full Paths"/>
+                    <MenuItem Header="Show Path" IsCheckable="True" Click="ShowPathClick" ToolTip="Enables Full Paths" IsChecked="True"/>
                 </MenuItem>
             </Menu>
             <TextBlock Text="Infinite Tag Loader" Style="{DynamicResource Z_TextBlockStyle}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0,0,0"/>
